@@ -44,3 +44,21 @@ export function transfer(
 export function history(records: TransferRecord[], accountId: string): TransferRecord[] {
   return records.filter((r) => r.from === accountId || r.to === accountId);
 }
+
+export type StatementLine = { record: TransferRecord; balance: number };
+
+/// One line per record involving the account, oldest first, each carrying the
+/// balance the account held immediately after it. A transfer to yourself
+/// nets to zero and still appears, because it happened.
+export function statement(
+  records: TransferRecord[],
+  accountId: string,
+  openingBalance: number,
+): StatementLine[] {
+  let balance = openingBalance;
+  return history(records, accountId).map((record) => {
+    if (record.to === accountId) balance += record.amount;
+    if (record.from === accountId) balance -= record.amount;
+    return { record, balance };
+  });
+}
