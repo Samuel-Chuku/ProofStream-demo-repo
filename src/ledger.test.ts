@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { history, transfer, type Account, type TransferRecord } from './ledger';
+import { history, statement, transfer, type Account, type TransferRecord } from './ledger';
 
 const alice = (): Account => ({ id: 'alice', balance: 100 });
 const bob = (): Account => ({ id: 'bob', balance: 10 });
@@ -58,4 +58,23 @@ test('history returns only the records involving an account', () => {
 
   assert.equal(history(log, 'alice').length, 2);
   assert.equal(history(log, 'nobody').length, 0);
+});
+
+test('statement carries the running balance after every record', () => {
+  let log: TransferRecord[] = [];
+  [, , log] = transfer(alice(), bob(), 25, log);
+  [, , log] = transfer(carol(), alice(), 10, log);
+  const lines = statement(log, 'alice', 100);
+  assert.deepEqual(lines.map((l) => l.balance), [75, 85]);
+});
+
+test('an account with no records has an empty statement', () => {
+  assert.deepEqual(statement([], 'nobody', 0), []);
+});
+
+test('a transfer to yourself nets to zero and still appears', () => {
+  const [, , log] = transfer(alice(), alice(), 5);
+  const lines = statement(log, 'alice', 100);
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0].balance, 100);
 });
